@@ -1,0 +1,17 @@
+[package]
+name = "livesplit-rendering"
+version = "0.1.0"
+authors = ["Christopher Serr <christopher.serr@gmail.com>"]
+
+[workspace]
+members = ["title-abbreviations", "gl-renderer"]
+
+[dependencies]
+livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core" }
+lyon = "0.11.0"
+rusttype = "0.7.2"
+euclid = "0.19.2"
+image = "0.20.0"
+base64 = "0.9.3"
+title-abbreviations = { path = "title-abbreviations" }
+ordered-float = "1.0.1"

@@ -1,0 +1,7 @@
+[package]
+name = "title-abbreviations"
+version = "0.1.0"
+authors = ["Christopher Serr <christopher.serr@gmail.com>"]
+
+[dependencies]
+unicase = "2.2.0"
