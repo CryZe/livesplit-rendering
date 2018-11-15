@@ -131,9 +131,9 @@ pub fn abbreviate(name: &str) -> Vec<String> {
         || and_handling(&name, &mut list)
     {
     } else {
-        if let Some(rest) = remove_prefix_word(name, "the") {
-            list.push(rest.into());
-        } else if let Some(rest) = remove_prefix_word(name, "a") {
+        if let Some(rest) =
+            remove_prefix_word(name, "the").or_else(|| remove_prefix_word(name, "a"))
+        {
             list.push(rest.into());
         }
 

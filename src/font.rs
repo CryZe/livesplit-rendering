@@ -138,7 +138,7 @@ pub fn ellipsis<'fd>(
                 (glyph, false)
             }
         }).take_while(move |&(_, should_end)| {
-            // TODO at some point it should possibly be take_while_inclusive or
+            // TODO: at some point it should possibly be take_while_inclusive or
             // something as this currently evaluates the last element in the map
             // even though we already know we'll end here
             if !ended {

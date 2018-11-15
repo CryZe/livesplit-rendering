@@ -24,14 +24,14 @@ use lyon::tessellation::{
 };
 use mesh::{fill_builder, stroke_builder};
 use ordered_float::OrderedFloat;
-use rusttype::{point, Codepoint, Font, GlyphId, Scale};
+use rusttype::Font;
 use std::iter;
 use title_abbreviations::abbreviate;
 
 pub use mesh::{Mesh, Vertex};
 
-static TEXT_FONT: &[u8] = include_bytes!("FiraSans-Regular.ttf");
-static TIMER_FONT: &[u8] = include_bytes!("timer.ttf");
+pub static TEXT_FONT: &[u8] = include_bytes!("FiraSans-Regular.ttf");
+pub static TIMER_FONT: &[u8] = include_bytes!("timer.ttf");
 
 pub type Pos = [f32; 2];
 pub type Rgba = [f32; 4];
@@ -100,6 +100,7 @@ impl Renderer {
         let total_height = state.components.iter().map(component_height).sum::<f32>();
         {
             let cached_total_height = self.height.get_or_insert(total_height);
+
             if *cached_total_height != total_height {
                 backend.resize(resolution.1 / *cached_total_height * total_height);
                 *cached_total_height = total_height;
@@ -134,7 +135,7 @@ impl Renderer {
                     context.render_rectangle([0.0, 0.0], [width, height], &component.background);
                     let text_color = component.text_color.unwrap_or(state.text_color);
 
-                    // TODO For now let's just assume there's an icon.
+                    // TODO: For now let's just assume there's an icon.
 
                     if let Some(url) = &component.icon_change {
                         if let Some((old_texture, _)) = self.game_icon.take() {
@@ -157,8 +158,8 @@ impl Renderer {
                         (left_bound, 0.0)
                     };
 
-                    // TODO Positioning for a single line
-                    // TODO Abbreviations with single line are weird
+                    // TODO: Positioning for a single line
+                    // TODO: Abbreviations with single line are weird
                     let abbreviations = abbreviate(&component.line1);
                     let line1 = abbreviations
                         .iter()
@@ -183,7 +184,7 @@ impl Renderer {
                     context.render_text_align(
                         line1,
                         left_bound,
-                        width + MARGIN, // TODO Should be - MARGIN
+                        width + MARGIN, // TODO: Should be - MARGIN
                         [x, 0.83],
                         0.8,
                         align,
@@ -212,8 +213,6 @@ impl Renderer {
                         }
                     };
 
-                    let split_height = 1.0f32;
-                    context.scale(split_height.recip());
                     let width = context.width;
 
                     let split_height = if component.display_two_rows {
@@ -232,6 +231,29 @@ impl Renderer {
                             context.backend.free_texture(old_texture);
                         }
                         *icon = context.create_texture(&icon_change.icon);
+                    }
+
+                    const COLUMN_WIDTH: f32 = 3.0;
+
+                    if let Some(column_labels) = &component.column_labels {
+                        let mut right_x = width - MARGIN;
+                        for label in column_labels {
+                            let left_x = right_x - COLUMN_WIDTH;
+                            context.render_text_right_align(
+                                label,
+                                [right_x, 0.7],
+                                0.8,
+                                [state.text_color; 2],
+                            );
+                            right_x = left_x;
+                        }
+
+                        context.translate(0.0, 1.0);
+                        context.render_rectangle(
+                            [0.0, -0.05],
+                            [width, 0.05],
+                            &Gradient::Plain(state.separators_color),
+                        );
                     }
 
                     for (i, split) in component.splits.iter().enumerate() {
@@ -259,7 +281,7 @@ impl Renderer {
                         }
 
                         {
-                            // TODO For now let's just assume there's an icon.
+                            // TODO: For now let's just assume there's an icon.
                             let icon_size = split_height - 0.2;
                             let icon_right = MARGIN + icon_size;
 
@@ -271,25 +293,22 @@ impl Renderer {
                                 );
                             }
 
-                            let mut pos_x = context.render_numbers(
-                                &split.time,
-                                [width - MARGIN, split_height - 0.3],
-                                0.8,
-                                [state.text_color; 2],
-                            );
-
-                            if !split.delta.is_empty() {
-                                pos_x = width - 3.0;
-                                pos_x = context.render_numbers(
-                                    &split.delta,
-                                    [pos_x, split_height - 0.3],
-                                    0.8,
-                                    [split.visual_color; 2],
-                                );
+                            let mut left_x = width - MARGIN;
+                            let mut right_x = left_x;
+                            for column in &split.columns {
+                                if !column.value.is_empty() {
+                                    left_x = context.render_numbers(
+                                        &column.value,
+                                        [right_x, split_height - 0.3],
+                                        0.8,
+                                        [column.visual_color; 2],
+                                    );
+                                }
+                                right_x -= COLUMN_WIDTH;
                             }
 
                             if component.display_two_rows {
-                                pos_x = width;
+                                left_x = width;
                             }
 
                             context.render_text_ellipsis(
@@ -297,7 +316,7 @@ impl Renderer {
                                 [icon_right + MARGIN, 0.7],
                                 0.8,
                                 [state.text_color; 2],
-                                pos_x - MARGIN,
+                                left_x - MARGIN,
                             );
                         }
                         context.translate(0.0, split_height);
@@ -503,14 +522,14 @@ impl Renderer {
                             width - MARGIN,
                             [0.5 * width, 0.7],
                             0.8,
-                            state.text_color,
+                            component.left_center_color.unwrap_or(state.text_color),
                         ),
                         Text::Split(left, right) => context.render_info_text_component(
                             &left,
                             &right,
-                            state.text_color,
-                            state.text_color,
-                            false, // TODO
+                            component.left_center_color.unwrap_or(state.text_color),
+                            component.right_color.unwrap_or(state.text_color),
+                            component.display_two_rows,
                         ),
                     }
                 }
@@ -1023,9 +1042,18 @@ fn component_height(component: &ComponentState) -> f32 {
                 TWO_ROW_HEIGHT
             } else {
                 1.0
+            } + if state.column_labels.is_some() {
+                1.0
+            } else {
+                0.0
             }
         }
         ComponentState::SumOfBest(state) => if state.display_two_rows {
+            TWO_ROW_HEIGHT
+        } else {
+            1.0
+        },
+        ComponentState::Text(state) => if state.display_two_rows {
             TWO_ROW_HEIGHT
         } else {
             1.0
@@ -1037,7 +1065,6 @@ fn component_height(component: &ComponentState) -> f32 {
         } else {
             1.0
         },
-        _ => 1.0,
     }
 }
 

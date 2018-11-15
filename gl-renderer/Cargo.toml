@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 
 [dependencies]
-glutin = "0.18.0"
+glutin = "0.17.0"
 gl = "0.10.0"
 livesplit-rendering = { path = ".." }
-iui = "0.3.0"
+# iui = "0.3.0"
+azul = { git = "https://github.com/maps4print/azul" }

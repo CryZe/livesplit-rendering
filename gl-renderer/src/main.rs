@@ -1,8 +1,9 @@
-// #![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 
 extern crate gl;
 extern crate glutin;
-extern crate iui;
+// extern crate iui;
+extern crate azul;
 extern crate livesplit_rendering;
 
 use gl::types::{GLchar, GLint, GLuint};
@@ -10,11 +11,12 @@ use glutin::{
     DeviceEvent, ElementState, Event, GlContext, KeyboardInput, MouseScrollDelta, VirtualKeyCode,
     WindowEvent,
 };
-use iui::controls::{Button, Combobox, VerticalBox};
-use iui::prelude::*;
+// use iui::controls::{Button, Combobox, VerticalBox};
+// use iui::prelude::*;
 
 use std::fs::File;
 use std::io::{BufReader, Seek, SeekFrom};
+use std::sync::{Arc, Mutex};
 
 use livesplit_core::{
     component::{
@@ -29,6 +31,8 @@ use livesplit_core::{
 };
 use livesplit_rendering::core as livesplit_core;
 use livesplit_rendering::{Backend, IndexPair, Mesh, Pos, Renderer, Rgba, Transform, Vertex};
+
+mod layout_editor;
 
 const DEFAULT_VERTEX_SHADER: &str = r#"#version 150
 uniform mat3x2 transform;
@@ -210,11 +214,11 @@ impl Backend for GlBackend {
 
 fn main() {
     // let path = r"C:\Projekte\one-offs\livesplit-one-quicksilver\static\8dj.lss";
-    let path = r"C:\Projekte\one-offs\livesplit-one-quicksilver\static\Portal - Inbounds.lss";
-    let file = BufReader::new(File::open(path).unwrap());
-    let mut run = composite::parse(file, Some(path.into()), true).unwrap().run;
-    // let mut run = Run::new();
-    // run.push_segment(Segment::new("Foo"));
+    // let path = r"C:\Projekte\one-offs\livesplit-one-quicksilver\static\Portal - Inbounds.lss";
+    // let file = BufReader::new(File::open(path).unwrap());
+    // let mut run = composite::parse(file, Some(path.into()), true).unwrap().run;
+    let mut run = Run::new();
+    run.push_segment(Segment::new("Foo"));
 
     run.fix_splits();
     let mut timer = Timer::new(run).unwrap();
@@ -235,6 +239,19 @@ fn main() {
         show_thin_separators: true,
         display_two_rows: true,
         visual_split_count: 10,
+        show_column_labels: true,
+        // columns: vec![
+        //     splits::ColumnSettings {
+        //         start_with: splits::ColumnStartWith::ComparisonSegmentTime,
+        //         update_with: splits::ColumnUpdateWith::SegmentTime,
+        //         ..Default::default()
+        //     },
+        //     splits::ColumnSettings {
+        //         start_with: splits::ColumnStartWith::Empty,
+        //         update_with: splits::ColumnUpdateWith::SegmentDelta,
+        //         ..Default::default()
+        //     },
+        // ],
         ..Default::default()
     }));
 
@@ -272,87 +289,13 @@ fn main() {
     //     ..Default::default()
     // }));
 
-    let mut layout_editor = LayoutEditor::new(layout).unwrap();
-
-    let ui = UI::init().expect("Couldn't initialize UI library");
-    let mut event_loop = ui.event_loop();
-
-    let mut win = Window::new(&ui, "Layout Editor", 200, 200, WindowType::NoMenubar);
-
-    let mut vbox = VerticalBox::new(&ui);
-    vbox.set_padded(&ui, true);
-
-    let mut selected_component = 0;
-
-    let mut component_list = Combobox::new(&ui);
-    component_list.append(&ui, "Current Comparison");
-    component_list.append(&ui, "Current Pace");
-    component_list.append(&ui, "Delta");
-    component_list.append(&ui, "Detailed Timer");
-    component_list.append(&ui, "Graph");
-    component_list.append(&ui, "Possible Time Save");
-    component_list.append(&ui, "Previous Segment");
-    component_list.append(&ui, "Splits");
-    component_list.append(&ui, "Sum of Best Segments");
-    component_list.append(&ui, "Text");
-    component_list.append(&ui, "Timer");
-    component_list.append(&ui, "Title");
-    component_list.append(&ui, "Total Playtime");
-    component_list.append(&ui, "Blank Space");
-    component_list.append(&ui, "Separator");
-
-    component_list.set_selected(&ui, selected_component);
-    component_list.on_selected(&ui, |i| selected_component = i);
-
-    let mut add_button = Button::new(&ui, "Add");
-    add_button.on_clicked(&ui, {
-        |_| match selected_component {
-            0 => layout_editor.add_component(current_comparison::Component::new()),
-            1 => layout_editor.add_component(current_pace::Component::new()),
-            2 => layout_editor.add_component(delta::Component::new()),
-            3 => layout_editor.add_component(Box::new(detailed_timer::Component::new())),
-            4 => layout_editor.add_component(graph::Component::new()),
-            5 => layout_editor.add_component(possible_time_save::Component::new()),
-            6 => layout_editor.add_component(previous_segment::Component::new()),
-            7 => layout_editor.add_component(splits::Component::new()),
-            8 => layout_editor.add_component(sum_of_best::Component::new()),
-            9 => layout_editor.add_component(text::Component::new()),
-            10 => layout_editor.add_component(timer::Component::new()),
-            11 => layout_editor.add_component(title::Component::new()),
-            12 => layout_editor.add_component(total_playtime::Component::new()),
-            13 => layout_editor.add_component(blank_space::Component::new()),
-            14 => layout_editor.add_component(separator::Component::new()),
-            _ => {}
-        }
-    });
-
-    let mut remove_button = Button::new(&ui, "Remove");
-    remove_button.on_clicked(&ui, { |_| layout_editor.remove_component() });
-
-    let mut duplicate_button = Button::new(&ui, "Duplicate");
-    duplicate_button.on_clicked(&ui, { |_| layout_editor.duplicate_component() });
-
-    let mut up_button = Button::new(&ui, "Move Up");
-    up_button.on_clicked(&ui, { |_| layout_editor.move_component_up() });
-
-    let mut down_button = Button::new(&ui, "Move Down");
-    down_button.on_clicked(&ui, { |_| layout_editor.move_component_down() });
-
-    vbox.append(&ui, component_list, LayoutStrategy::Compact);
-    vbox.append(&ui, add_button, LayoutStrategy::Compact);
-    vbox.append(&ui, remove_button, LayoutStrategy::Compact);
-    vbox.append(&ui, duplicate_button, LayoutStrategy::Compact);
-    vbox.append(&ui, up_button, LayoutStrategy::Compact);
-    vbox.append(&ui, down_button, LayoutStrategy::Compact);
-
-    win.set_child(&ui, vbox);
-
-    win.show(&ui);
+    let layout_editor = Arc::new(Mutex::new(LayoutEditor::new(layout).unwrap()));
+    layout_editor::open_window(layout_editor.clone());
 
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new()
         .with_title("LiveSplit One")
-        .with_dimensions((350.0, 600.0).into());
+        .with_dimensions((250.0, 500.0).into());
     // .with_decorations(false)
     // .with_transparency(true)
     // .with_resizable(true);
@@ -498,7 +441,7 @@ fn main() {
 
     let mut end_loop = false;
     while !end_loop {
-        end_loop = !event_loop.next_tick(&ui);
+        // end_loop = !event_loop.next_tick(&ui);
         events_loop.poll_events(|event| match event {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
@@ -525,7 +468,7 @@ fn main() {
                     let _ = file.seek(SeekFrom::Start(0));
                     if let Ok(settings) = LayoutSettings::from_json(file) {
                         if let Ok(editor) = LayoutEditor::new(Layout::from_settings(settings)) {
-                            layout_editor = editor;
+                            *layout_editor.lock().unwrap() = editor;
                         }
                     }
                 }
@@ -564,7 +507,7 @@ fn main() {
             _ => {}
         });
 
-        let layout_state = layout_editor.layout_state(&timer);
+        let layout_state = layout_editor.lock().unwrap().layout_state(&timer);
 
         unsafe {
             gl::ClearColor(0.0, 0.0, 0.0, 0.0);

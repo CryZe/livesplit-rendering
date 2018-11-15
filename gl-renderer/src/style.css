@@ -1,0 +1,123 @@
+#body {
+    color: white;
+    font-family: "FiraSans";
+    font-size: 16px;
+    background-color: rgb(23, 23, 23);
+    padding: 15px;
+}
+
+#layout-editor {
+    /* background-color: green; */
+}
+
+#component-list-editor {
+    flex-direction: row;
+    /* min-height: -200px; */
+    /* height: 250px; */
+}
+
+#buttons {
+    /* background-color: blue; */
+    flex-direction: column;
+    width: 40px;
+}
+
+.clickable-button {
+    height: 40px;
+    background: linear-gradient(#1c1c1c 0%, #111111 100%);
+    border: 1px solid #3f3f3f;
+    border-radius: 5px;
+    margin-bottom: 4px;
+    padding-left: 6px;
+    padding-top: 3px;
+    font-family: "font-awesome";
+    text-align: center;
+    /* cursor: pointer; */
+}
+
+.unclickable-button {
+    height: 40px;
+    border: 1px solid #3f3f3f;
+    border-radius: 5px;
+    margin-bottom: 4px;
+    padding-left: 6px;
+    padding-top: 3px;
+    font-family: "font-awesome";
+    text-align: center;
+
+    background-color: #222;
+    color: #666;
+}
+
+.spacing-column {
+    width: 15px;
+}
+
+#component-list {
+    flex-direction: column;
+    /* background-color: rgba(0, 0, 0, 0.5); */
+    border: 1px solid #3f3f3f;
+    padding: 1px;
+    /* height: 150px; */
+    /* flex-grow: 0; */
+    box-shadow: 1px 1px 5px 0px #00000033;
+}
+
+.odd-component {
+    height: 22px;
+    padding-top: 1px;
+    padding-left: 12px;
+    text-align: left;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.even-component {
+    height: 22px;
+    padding-top: 1px;
+    padding-left: 12px;
+    text-align: left;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.selected-component {
+    height: 22px;
+    padding-top: 1px;
+    padding-left: 12px;
+    text-align: left;
+    background: linear-gradient(#3373f4 0%, #153574 100%);
+}
+
+#layout-settings {
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px solid #3f3f3f;
+}
+
+.context-menu {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    width: 180px;
+    height: 355px;
+    background-color: #191919;
+    border: 1px solid #3f3f3f;
+    border-radius: 5px;
+    flex-direction: column;
+    padding-top: 5px;
+    text-align: left;
+    /* box-shadow: 5px 5px 15px 0px #00000085; */
+    /* font-size: 16px; */
+}
+
+.context-menu-entry {
+    color: white;
+    font-family: "FiraSans";
+    width: 180px;
+    height: 23px;
+    padding-left: 10px;
+    /* background: linear-gradient(#3373f4 0%, #153574 100%); */
+    /* border: 1px solid #3f3f3f; */
+}
+
+.label {
+    letter-spacing: 1.3px;
+}

@@ -4,14 +4,19 @@ version = "0.1.0"
 authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 
 [workspace]
-members = ["title-abbreviations", "gl-renderer"]
+members = ["gl-renderer", "title-abbreviations", "livesplit-core"]
 
 [dependencies]
-livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core" }
+livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "7db772f13e7c1668c92795b5842759a08309cc9d" }
+# livesplit-core = { path = "livesplit-core" }
 lyon = "0.11.0"
 rusttype = "0.7.2"
 euclid = "0.19.2"
 image = "0.20.0"
-base64 = "0.9.3"
+base64 = "0.10.0"
 title-abbreviations = { path = "title-abbreviations" }
 ordered-float = "1.0.1"
+
+[profile.release]
+lto = true
+panic = "abort"
