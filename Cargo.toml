@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 
 [workspace]
-members = ["gl-renderer", "title-abbreviations", "livesplit-core"]
+members = ["gl-renderer", "title-abbreviations"]
 
 [dependencies]
 livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "7db772f13e7c1668c92795b5842759a08309cc9d" }
