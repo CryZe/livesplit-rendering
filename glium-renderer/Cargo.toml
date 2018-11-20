@@ -1,0 +1,8 @@
+[package]
+name = "glium-renderer"
+version = "0.1.0"
+authors = ["Christopher Serr <christopher.serr@gmail.com>"]
+
+[dependencies]
+glium = "0.22.0"
+livesplit-rendering = { path = ".." }

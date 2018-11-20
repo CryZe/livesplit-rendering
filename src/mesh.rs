@@ -4,7 +4,7 @@ use lyon::tessellation::{
 };
 
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Vertex {
     pub x: f32,
     pub y: f32,
