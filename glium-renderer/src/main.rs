@@ -2,15 +2,30 @@ extern crate glium;
 extern crate livesplit_rendering;
 
 use glium::{
-    glutin, index::PrimitiveType, program::ProgramCreationInput, uniform, vertex::AttributeType,
-    Blend, BlendingFunction, DrawParameters, IndexBuffer, LinearBlendingFactor, Surface,
+    glutin,
+    index::PrimitiveType,
+    program::ProgramCreationInput,
+    texture::{ClientFormat, RawImage2d},
+    uniform,
+    vertex::AttributeType,
+    Blend, BlendingFunction, DrawParameters, IndexBuffer, LinearBlendingFactor, Surface, Texture2d,
     VertexBuffer,
 };
-use livesplit_core::{Layout, Run, Segment, Timer};
+use glutin::{DeviceEvent, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+use livesplit_core::{
+    layout::{editor::Editor as LayoutEditor, Layout, LayoutSettings},
+    run::parser::composite,
+    Run, Segment, Timer,
+};
 use livesplit_rendering::{
     core as livesplit_core, Backend, IndexPair, Mesh, Pos, Renderer, Rgba, Transform, Vertex,
 };
-use std::{borrow::Cow, mem};
+use std::{
+    borrow::Cow,
+    fs::File,
+    io::{BufReader, Seek, SeekFrom},
+    mem,
+};
 
 const DEFAULT_VERTEX_SHADER: &str = r#"#version 150
 uniform mat3x3 transform;
@@ -53,6 +68,7 @@ struct LongLivingData<'display> {
     display: &'display glium::Display,
     program: glium::Program,
     meshes: Vec<(VertexBuffer<Vertex>, IndexBuffer<u16>)>,
+    textures: Vec<Texture2d>,
     draw_params: DrawParameters<'static>,
 }
 
@@ -90,28 +106,57 @@ impl<'frame, 'display: 'frame> Backend for GliumBackend<'frame, 'display> {
     ) {
         let (vertices, indices) = &self.data.meshes[idx];
         let [x1, y1, z1, x2, y2, z2] = transform.to_column_major_array();
-        self.frame
-            .draw(
-                vertices,
-                indices,
-                &self.data.program,
-                &uniform!{
-                    transform: [[x1, y1, z1], [x2, y2, z2], [0.0, 0.0, 0.0]],
-                    color_tl: tl,
-                    color_tr: tr,
-                    color_br: br,
-                    color_bl: bl,
-
-                    use_texture: 0.0f32,
-                },
-                &self.data.draw_params,
-            ).unwrap();
+        if let Some([tex_idx, _, _]) = texture {
+            self.frame
+                .draw(
+                    vertices,
+                    indices,
+                    &self.data.program,
+                    &uniform! {
+                        transform: [[x1, y1, z1], [x2, y2, z2], [0.0, 0.0, 0.0]],
+                        color_tl: tl,
+                        color_tr: tr,
+                        color_br: br,
+                        color_bl: bl,
+                        tex: &self.data.textures[tex_idx],
+                        use_texture: 1.0f32,
+                    },
+                    &self.data.draw_params,
+                ).unwrap();
+        } else {
+            self.frame
+                .draw(
+                    vertices,
+                    indices,
+                    &self.data.program,
+                    &uniform! {
+                        transform: [[x1, y1, z1], [x2, y2, z2], [0.0, 0.0, 0.0]],
+                        color_tl: tl,
+                        color_tr: tr,
+                        color_br: br,
+                        color_bl: bl,
+                        use_texture: 0.0f32,
+                    },
+                    &self.data.draw_params,
+                ).unwrap();
+        }
     }
 
     fn free_mesh(&mut self, [vbo, ebo, _]: IndexPair) {}
 
     fn create_texture(&mut self, width: u32, height: u32, data: &[u8]) -> IndexPair {
-        [0, 0, 0]
+        let texture = Texture2d::new(
+            self.data.display,
+            RawImage2d {
+                data: Cow::Borrowed(data),
+                width,
+                height,
+                format: ClientFormat::U8U8U8U8,
+            },
+        ).unwrap();
+        let idx = self.data.textures.len();
+        self.data.textures.push(texture);
+        [idx, 0, 0]
     }
     fn free_texture(&mut self, [texture, _, _]: IndexPair) {}
 
@@ -120,12 +165,20 @@ impl<'frame, 'display: 'frame> Backend for GliumBackend<'frame, 'display> {
 
 fn main() {
     let mut events_loop = glium::glutin::EventsLoop::new();
+
     let window = glium::glutin::WindowBuilder::new()
         .with_dimensions((250, 500).into())
-        .with_title("Hello world");
+        .with_title("LiveSplit One")
+        .with_resizable(true);
+
     let context = glium::glutin::ContextBuilder::new()
-        .with_srgb(true)
-        .with_multisampling(16);
+        .with_vsync(true)
+        .with_hardware_acceleration(None)
+        .with_gl(glutin::GlRequest::GlThenGles {
+            opengl_version: (3, 2),
+            opengles_version: (2, 0),
+        }).with_srgb(true);
+
     let display = glium::Display::new(window, context, &events_loop).unwrap();
 
     let program = glium::Program::new(
@@ -146,6 +199,7 @@ fn main() {
         program,
         display: &display,
         meshes: vec![],
+        textures: vec![],
         draw_params: DrawParameters {
             blend: Blend {
                 color: BlendingFunction::Addition {
@@ -162,10 +216,17 @@ fn main() {
         },
     };
 
+    // let path = r"../4cg.lss";
+    // let file = BufReader::new(File::open(path).unwrap());
+    // let mut run = composite::parse(file, Some(path.into()), true).unwrap().run;
+
     let mut run = Run::new();
-    run.push_segment(Segment::new("Foo"));
+    run.set_game_name("Game");
+    run.set_category_name("Category");
+    run.push_segment(Segment::new("Time"));
+
+    run.fix_splits();
     let mut timer = Timer::new(run).unwrap();
-    timer.start();
 
     let mut layout = Layout::default_layout();
     // layout.general_settings_mut().background = livesplit_core::settings::Gradient::Transparent;
@@ -192,13 +253,61 @@ fn main() {
         target.finish().unwrap();
 
         events_loop.poll_events(|ev| match ev {
-            glutin::Event::WindowEvent { event, .. } => match event {
-                glutin::WindowEvent::CloseRequested => closed = true,
-                _ => (),
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::CloseRequested => closed = true,
+                WindowEvent::KeyboardInput {
+                    input:
+                        KeyboardInput {
+                            state: ElementState::Pressed,
+                            virtual_keycode: Some(key),
+                            ..
+                        },
+                    ..
+                } => match key {
+                    VirtualKeyCode::Numpad1 => timer.split_or_start(),
+                    VirtualKeyCode::Numpad2 => timer.skip_split(),
+                    VirtualKeyCode::Numpad3 => timer.reset(true),
+                    VirtualKeyCode::Numpad4 => timer.switch_to_previous_comparison(),
+                    VirtualKeyCode::Numpad5 => timer.toggle_pause(),
+                    VirtualKeyCode::Numpad6 => timer.switch_to_next_comparison(),
+                    VirtualKeyCode::Numpad8 => timer.undo_split(),
+                    _ => {}
+                },
+                WindowEvent::DroppedFile(path) => {
+                    let mut file = BufReader::new(File::open(&path).unwrap());
+                    if composite::parse(&mut file, Some(path), true)
+                        .map_err(drop)
+                        .and_then(|run| timer.set_run(run.run).map_err(drop))
+                        .is_err()
+                    {
+                        let _ = file.seek(SeekFrom::Start(0));
+                        if let Ok(settings) = LayoutSettings::from_json(file) {
+                            layout = Layout::from_settings(settings);
+                        }
+                    }
+                }
+                _ => {}
             },
-            _ => (),
+            Event::DeviceEvent { event, .. } => match event {
+                DeviceEvent::Key(KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(key),
+                    ..
+                }) => match key {
+                    VirtualKeyCode::Numpad1 => timer.split_or_start(),
+                    VirtualKeyCode::Numpad2 => timer.skip_split(),
+                    VirtualKeyCode::Numpad3 => timer.reset(true),
+                    VirtualKeyCode::Numpad4 => timer.switch_to_previous_comparison(),
+                    VirtualKeyCode::Numpad5 => timer.toggle_pause(),
+                    VirtualKeyCode::Numpad6 => timer.switch_to_next_comparison(),
+                    VirtualKeyCode::Numpad8 => timer.undo_split(),
+                    _ => {}
+                },
+                _ => {}
+            },
+            _ => {}
         });
 
-        std::thread::sleep(std::time::Duration::from_millis(33));
+        // std::thread::sleep(std::time::Duration::from_millis(33));
     }
 }
