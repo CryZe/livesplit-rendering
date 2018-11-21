@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 extern crate glium;
 extern crate livesplit_rendering;
 
@@ -11,14 +13,16 @@ use glium::{
     Blend, BlendingFunction, DrawParameters, IndexBuffer, LinearBlendingFactor, Surface, Texture2d,
     VertexBuffer,
 };
-use glutin::{DeviceEvent, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+use glutin::{
+    DeviceEvent, ElementState, Event, KeyboardInput, MouseScrollDelta, VirtualKeyCode, WindowEvent,
+};
 use livesplit_core::{
     layout::{editor::Editor as LayoutEditor, Layout, LayoutSettings},
     run::parser::composite,
     Run, Segment, Timer,
 };
 use livesplit_rendering::{
-    core as livesplit_core, Backend, IndexPair, Mesh, Pos, Renderer, Rgba, Transform, Vertex,
+    core as livesplit_core, Backend, IndexPair, Mesh, Renderer, Rgba, Transform, Vertex,
 };
 use std::{
     borrow::Cow,
@@ -160,26 +164,34 @@ impl<'frame, 'display: 'frame> Backend for GliumBackend<'frame, 'display> {
     }
     fn free_texture(&mut self, [texture, _, _]: IndexPair) {}
 
-    fn resize(&mut self, height: f32) {}
+    fn resize(&mut self, height: f32) {
+        let (width, _) = self.frame.get_dimensions();
+        self.data
+            .display
+            .gl_window()
+            .set_inner_size((width as f64, height as f64).into());
+    }
 }
 
 fn main() {
     let mut events_loop = glium::glutin::EventsLoop::new();
 
-    let window = glium::glutin::WindowBuilder::new()
-        .with_dimensions((250, 500).into())
-        .with_title("LiveSplit One")
-        .with_resizable(true);
+    let display = [16, 8, 4, 2, 1]
+        .iter()
+        .find_map(|&samples| {
+            let window = glium::glutin::WindowBuilder::new()
+                .with_dimensions((300, 500).into())
+                .with_title("LiveSplit One")
+                .with_resizable(true);
 
-    let context = glium::glutin::ContextBuilder::new()
-        .with_vsync(true)
-        .with_hardware_acceleration(None)
-        .with_gl(glutin::GlRequest::GlThenGles {
-            opengl_version: (3, 2),
-            opengles_version: (2, 0),
-        }).with_srgb(true);
+            let context = glium::glutin::ContextBuilder::new()
+                .with_vsync(true)
+                .with_hardware_acceleration(None)
+                .with_srgb(true)
+                .with_multisampling(samples);
 
-    let display = glium::Display::new(window, context, &events_loop).unwrap();
+            glium::Display::new(window, context, &events_loop).ok()
+        }).unwrap();
 
     let program = glium::Program::new(
         &display,
@@ -273,6 +285,20 @@ fn main() {
                     VirtualKeyCode::Numpad8 => timer.undo_split(),
                     _ => {}
                 },
+                WindowEvent::MouseWheel { delta, .. } => {
+                    let mut scroll = match delta {
+                        MouseScrollDelta::LineDelta(_, y) => -y as i32,
+                        MouseScrollDelta::PixelDelta(delta) => (delta.y / 15.0) as i32,
+                    };
+                    while scroll < 0 {
+                        layout.scroll_up();
+                        scroll += 1;
+                    }
+                    while scroll > 0 {
+                        layout.scroll_down();
+                        scroll -= 1;
+                    }
+                }
                 WindowEvent::DroppedFile(path) => {
                     let mut file = BufReader::new(File::open(&path).unwrap());
                     if composite::parse(&mut file, Some(path), true)
@@ -288,23 +314,23 @@ fn main() {
                 }
                 _ => {}
             },
-            Event::DeviceEvent { event, .. } => match event {
-                DeviceEvent::Key(KeyboardInput {
-                    state: ElementState::Pressed,
-                    virtual_keycode: Some(key),
-                    ..
-                }) => match key {
-                    VirtualKeyCode::Numpad1 => timer.split_or_start(),
-                    VirtualKeyCode::Numpad2 => timer.skip_split(),
-                    VirtualKeyCode::Numpad3 => timer.reset(true),
-                    VirtualKeyCode::Numpad4 => timer.switch_to_previous_comparison(),
-                    VirtualKeyCode::Numpad5 => timer.toggle_pause(),
-                    VirtualKeyCode::Numpad6 => timer.switch_to_next_comparison(),
-                    VirtualKeyCode::Numpad8 => timer.undo_split(),
-                    _ => {}
-                },
-                _ => {}
-            },
+            // Event::DeviceEvent { event, .. } => match event {
+            //     DeviceEvent::Key(KeyboardInput {
+            //         state: ElementState::Pressed,
+            //         virtual_keycode: Some(key),
+            //         ..
+            //     }) => match key {
+            //         VirtualKeyCode::Numpad1 => timer.split_or_start(),
+            //         VirtualKeyCode::Numpad2 => timer.skip_split(),
+            //         VirtualKeyCode::Numpad3 => timer.reset(true),
+            //         VirtualKeyCode::Numpad4 => timer.switch_to_previous_comparison(),
+            //         VirtualKeyCode::Numpad5 => timer.toggle_pause(),
+            //         VirtualKeyCode::Numpad6 => timer.switch_to_next_comparison(),
+            //         VirtualKeyCode::Numpad8 => timer.undo_split(),
+            //         _ => {}
+            //     },
+            //     _ => {}
+            // },
             _ => {}
         });
 
