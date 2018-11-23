@@ -7,7 +7,7 @@ authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 members = ["glium-renderer", "title-abbreviations"]
 
 [dependencies]
-livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "7db772f13e7c1668c92795b5842759a08309cc9d" }
+livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "778f84c7564dad7ef0e52f6bbd044933bd659c88" }
 # livesplit-core = { path = "livesplit-core" }
 lyon = "0.11.0"
 rusttype = "0.7.2"

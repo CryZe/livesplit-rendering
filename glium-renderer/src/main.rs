@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 extern crate glium;
 extern crate livesplit_rendering;
@@ -14,7 +14,8 @@ use glium::{
     VertexBuffer,
 };
 use glutin::{
-    DeviceEvent, ElementState, Event, KeyboardInput, MouseScrollDelta, VirtualKeyCode, WindowEvent,
+    dpi, DeviceEvent, ElementState, Event, KeyboardInput, MouseButton, MouseScrollDelta,
+    VirtualKeyCode, WindowEvent,
 };
 use livesplit_core::{
     layout::{editor::Editor as LayoutEditor, Layout, LayoutSettings},
@@ -165,11 +166,15 @@ impl<'frame, 'display: 'frame> Backend for GliumBackend<'frame, 'display> {
     fn free_texture(&mut self, [texture, _, _]: IndexPair) {}
 
     fn resize(&mut self, height: f32) {
-        let (width, _) = self.frame.get_dimensions();
-        self.data
-            .display
-            .gl_window()
-            .set_inner_size((width as f64, height as f64).into());
+        // FIXME: Resizing doesn't just affect the height when the DPI is not
+        // 100% on at least Windows.
+        let window = self.data.display.gl_window();
+        let dpi = window.get_hidpi_factor();
+        let old_logical_size = window.get_inner_size().unwrap();
+        let new_physical_size = dpi::PhysicalSize::new(0.0, height as f64).to_logical(dpi);
+        let new_logical_size =
+            dpi::LogicalSize::new(old_logical_size.width as f64, new_physical_size.height);
+        window.set_inner_size(new_logical_size);
     }
 }
 
@@ -179,10 +184,13 @@ fn main() {
     let display = [16, 8, 4, 2, 1]
         .iter()
         .find_map(|&samples| {
+            // FIXME: Don't recreate the window on retry.
             let window = glium::glutin::WindowBuilder::new()
                 .with_dimensions((300, 500).into())
                 .with_title("LiveSplit One")
-                .with_resizable(true);
+                .with_resizable(true)
+                .with_transparency(true);
+            // .with_decorations(false);
 
             let context = glium::glutin::ContextBuilder::new()
                 .with_vsync(true)
@@ -241,9 +249,14 @@ fn main() {
     let mut timer = Timer::new(run).unwrap();
 
     let mut layout = Layout::default_layout();
-    // layout.general_settings_mut().background = livesplit_core::settings::Gradient::Transparent;
+    layout.general_settings_mut().background = livesplit_core::settings::Gradient::Plain(
+        livesplit_core::settings::Color::hsla(0.0, 0.0, 0.06, 0.75),
+    );
 
     let mut renderer = Renderer::new();
+
+    // let mut cached_mouse_pos = dpi::LogicalPosition::new(0.0, 0.0);
+    // let mut dragging = None::<(dpi::LogicalPosition, dpi::LogicalPosition)>;
 
     let mut closed = false;
     while !closed {
@@ -251,7 +264,7 @@ fn main() {
 
         let mut target = display.draw();
         let (width, height) = target.get_dimensions();
-        target.clear_color(0.0, 0.0, 0.0, 1.0);
+        target.clear_color(0.0, 0.0, 0.0, 0.0);
         if height > 0 {
             renderer.render(
                 &mut GliumBackend {
@@ -299,6 +312,23 @@ fn main() {
                         scroll -= 1;
                     }
                 }
+                // WindowEvent::MouseInput {
+                //     button: MouseButton::Left,
+                //     state: ElementState::Pressed,
+                //     ..
+                // } => {
+                //     dragging = Some((
+                //         cached_mouse_pos,
+                //         display.gl_window().get_position().unwrap(),
+                //     ));
+                // }
+                // WindowEvent::MouseInput {
+                //     button: MouseButton::Left,
+                //     state: ElementState::Released,
+                //     ..
+                // } => {
+                //     dragging = None;
+                // }
                 WindowEvent::DroppedFile(path) => {
                     let mut file = BufReader::new(File::open(&path).unwrap());
                     if composite::parse(&mut file, Some(path), true)
@@ -315,20 +345,30 @@ fn main() {
                 _ => {}
             },
             // Event::DeviceEvent { event, .. } => match event {
-            //     DeviceEvent::Key(KeyboardInput {
-            //         state: ElementState::Pressed,
-            //         virtual_keycode: Some(key),
-            //         ..
-            //     }) => match key {
-            //         VirtualKeyCode::Numpad1 => timer.split_or_start(),
-            //         VirtualKeyCode::Numpad2 => timer.skip_split(),
-            //         VirtualKeyCode::Numpad3 => timer.reset(true),
-            //         VirtualKeyCode::Numpad4 => timer.switch_to_previous_comparison(),
-            //         VirtualKeyCode::Numpad5 => timer.toggle_pause(),
-            //         VirtualKeyCode::Numpad6 => timer.switch_to_next_comparison(),
-            //         VirtualKeyCode::Numpad8 => timer.undo_split(),
-            //         _ => {}
-            //     },
+            //     DeviceEvent::MouseMotion {
+            //         delta: (dx, dy), ..
+            //     } => {
+            //         // cached_mouse_pos = position;
+            //         if let Some((drag_pos, window_pos)) = &mut dragging {
+            //             window_pos.x += dx;
+            //             window_pos.y += dy;
+            //             display.gl_window().set_position(*window_pos);
+            //         }
+            //     }
+            //     //     DeviceEvent::Key(KeyboardInput {
+            //     //         state: ElementState::Pressed,
+            //     //         virtual_keycode: Some(key),
+            //     //         ..
+            //     //     }) => match key {
+            //     //         VirtualKeyCode::Numpad1 => timer.split_or_start(),
+            //     //         VirtualKeyCode::Numpad2 => timer.skip_split(),
+            //     //         VirtualKeyCode::Numpad3 => timer.reset(true),
+            //     //         VirtualKeyCode::Numpad4 => timer.switch_to_previous_comparison(),
+            //     //         VirtualKeyCode::Numpad5 => timer.toggle_pause(),
+            //     //         VirtualKeyCode::Numpad6 => timer.switch_to_next_comparison(),
+            //     //         VirtualKeyCode::Numpad8 => timer.undo_split(),
+            //     //         _ => {}
+            //     //     },
             //     _ => {}
             // },
             _ => {}
