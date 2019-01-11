@@ -4,11 +4,11 @@ version = "0.1.0"
 authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 
 [workspace]
-members = ["glium-renderer", "title-abbreviations"]
+members = ["glium-renderer", "title-abbreviations", "gfx-renderer", "vulkano-renderer"]
 
 [dependencies]
-livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "778f84c7564dad7ef0e52f6bbd044933bd659c88" }
-# livesplit-core = { path = "livesplit-core" }
+# livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "422dbb949a483f34e1a4b78fd727cdc17b8510cf" }
+livesplit-core = { path = "livesplit-core" }
 lyon = "0.11.0"
 rusttype = "0.7.2"
 euclid = "0.19.2"
@@ -20,3 +20,8 @@ ordered-float = "1.0.1"
 [profile.release]
 lto = true
 panic = "abort"
+
+[patch.crates-io]
+gfx-hal = { git = "https://github.com/CryZe/gfx", branch = "vulkan-msaa"  }
+gfx-backend-vulkan = { git = "https://github.com/CryZe/gfx", branch = "vulkan-msaa" }
+gfx-backend-dx12 = { git = "https://github.com/CryZe/gfx", branch = "vulkan-msaa" }

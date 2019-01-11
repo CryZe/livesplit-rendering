@@ -1,0 +1,12 @@
+[package]
+name = "vulkano-renderer"
+version = "0.1.0"
+authors = ["Christopher Serr <christopher.serr@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+vulkano = "0.11.1"
+vulkano-win = "0.11.1"
+vulkano-shaders = "0.11.1"
+winit = { version = "0.18.0", features = ["icon_loading"] }
+livesplit-rendering = { path = ".." }

@@ -63,7 +63,8 @@ impl GlyphCache {
                     path.path_iter(),
                     &FillOptions::tolerance(0.005).with_normals(false),
                     &mut fill_builder(&mut glyph_mesh),
-                ).unwrap();
+                )
+                .unwrap();
 
             for vertex in &mut glyph_mesh.vertices {
                 vertex.v = (-vertex.y - offset_h) / delta_h;

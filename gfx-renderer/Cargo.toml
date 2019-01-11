@@ -1,0 +1,16 @@
+[package]
+name = "gfx-renderer"
+version = "0.1.0"
+authors = ["Christopher Serr <christopher.serr@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+gfx-hal = "0.1.0"
+winit = { version = "0.18.0", features = ["icon_loading"] }
+image = "0.20.1"
+glsl-to-spirv = "0.1.7"
+gfx-backend-dx12 = "0.1.0"
+gfx-backend-vulkan = "0.1.0"
+env_logger = "0.6.0"
+log = "0.4.6"
+livesplit-rendering = { path = ".." }

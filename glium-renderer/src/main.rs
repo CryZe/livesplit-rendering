@@ -15,10 +15,10 @@ use glium::{
 };
 use glutin::{
     dpi, DeviceEvent, ElementState, Event, KeyboardInput, MouseButton, MouseScrollDelta,
-    VirtualKeyCode, WindowEvent,
+    VirtualKeyCode, WindowEvent, Icon,
 };
 use livesplit_core::{
-    layout::{editor::Editor as LayoutEditor, Layout, LayoutSettings},
+    layout::{self, editor::Editor as LayoutEditor, Layout, LayoutSettings},
     run::parser::composite,
     Run, Segment, Timer,
 };
@@ -93,7 +93,8 @@ impl<'frame, 'display: 'frame> Backend for GliumBackend<'frame, 'display> {
                     (Cow::Borrowed("texcoord"), 8, AttributeType::F32F32, false),
                 ]),
                 mem::size_of::<livesplit_rendering::Vertex>(),
-            ).unwrap()
+            )
+            .unwrap()
         };
         let indices =
             IndexBuffer::new(self.data.display, PrimitiveType::TrianglesList, indices).unwrap();
@@ -127,7 +128,8 @@ impl<'frame, 'display: 'frame> Backend for GliumBackend<'frame, 'display> {
                         use_texture: 1.0f32,
                     },
                     &self.data.draw_params,
-                ).unwrap();
+                )
+                .unwrap();
         } else {
             self.frame
                 .draw(
@@ -143,7 +145,8 @@ impl<'frame, 'display: 'frame> Backend for GliumBackend<'frame, 'display> {
                         use_texture: 0.0f32,
                     },
                     &self.data.draw_params,
-                ).unwrap();
+                )
+                .unwrap();
         }
     }
 
@@ -158,7 +161,8 @@ impl<'frame, 'display: 'frame> Backend for GliumBackend<'frame, 'display> {
                 height,
                 format: ClientFormat::U8U8U8U8,
             },
-        ).unwrap();
+        )
+        .unwrap();
         let idx = self.data.textures.len();
         self.data.textures.push(texture);
         [idx, 0, 0]
@@ -188,6 +192,9 @@ fn main() {
             let window = glium::glutin::WindowBuilder::new()
                 .with_dimensions((300, 500).into())
                 .with_title("LiveSplit One")
+                .with_window_icon(Some(
+                    Icon::from_bytes(include_bytes!("../../icon.png")).unwrap(),
+                ))
                 .with_resizable(true)
                 .with_transparency(true);
             // .with_decorations(false);
@@ -199,7 +206,8 @@ fn main() {
                 .with_multisampling(samples);
 
             glium::Display::new(window, context, &events_loop).ok()
-        }).unwrap();
+        })
+        .unwrap();
 
     let program = glium::Program::new(
         &display,
@@ -213,7 +221,8 @@ fn main() {
             outputs_srgb: true,
             uses_point_size: false,
         },
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut data = LongLivingData {
         program,
@@ -252,6 +261,7 @@ fn main() {
     layout.general_settings_mut().background = livesplit_core::settings::Gradient::Plain(
         livesplit_core::settings::Color::hsla(0.0, 0.0, 0.06, 0.75),
     );
+    // layout.general_settings_mut().background = livesplit_core::settings::Gradient::Transparent;
 
     let mut renderer = Renderer::new();
 
@@ -337,8 +347,13 @@ fn main() {
                         .is_err()
                     {
                         let _ = file.seek(SeekFrom::Start(0));
-                        if let Ok(settings) = LayoutSettings::from_json(file) {
+                        if let Ok(settings) = LayoutSettings::from_json(&mut file) {
                             layout = Layout::from_settings(settings);
+                        } else {
+                            let _ = file.seek(SeekFrom::Start(0));
+                            if let Ok(parsed_layout) = layout::parser::parse(&mut file) {
+                                layout = parsed_layout;
+                            }
                         }
                     }
                 }

@@ -8,4 +8,4 @@ glutin = "0.17.0"
 gl = "0.10.0"
 livesplit-rendering = { path = ".." }
 # iui = "0.3.0"
-azul = { git = "https://github.com/maps4print/azul" }
+azul = { git = "https://github.com/maps4print/azul", rev = "741e3e98ad92df90daf7438b6ba5d64b620ecd47" }

@@ -7,6 +7,7 @@ use livesplit_core::{
         total_playtime,
     },
     layout,
+    settings::Value,
 };
 use std::{
     sync::{Arc, Barrier, Mutex},
@@ -39,6 +40,47 @@ impl azul::traits::Layout for LayoutEditorWindow {
             }
 
             component_list.add_child(child);
+        }
+
+        let mut settings_list = Dom::new(NodeType::Div).with_id("layout-settings");
+        for (i, field) in self.state.component_settings.fields.iter().enumerate() {
+            let mut child = Dom::new(NodeType::Div)
+                .with_child(Dom::new(NodeType::Label(field.text.clone())).with_class("label"))
+                .with_class("setting");
+
+            match &field.value {
+                Value::Bool(active) => child.add_child(
+                    Dom::new(NodeType::Div)
+                        .with_class("setting-value")
+                        .with_child(Dom::new(NodeType::Label(active.to_string())))
+                        .with_callback(
+                            On::MouseUp,
+                            Callback(|app_state: &mut AppState<LayoutEditorWindow>, event| {
+                                let (_, parent) =
+                                    event.get_index_in_parent(event.hit_dom_node).unwrap();
+                                let (index, _) = event.get_index_in_parent(parent).unwrap();
+                                let mut state = app_state.data.lock().unwrap();
+                                let old_value =
+                                    match &state.state.component_settings.fields[index].value {
+                                        Value::Bool(val) => *val,
+                                        _ => unreachable!(),
+                                    };
+                                state.state = {
+                                    let mut editor = state.editor.lock().unwrap();
+                                    editor.set_component_settings_value(
+                                        index,
+                                        Value::Bool(!old_value),
+                                    );
+                                    editor.state()
+                                };
+                                UpdateScreen::Redraw
+                            }),
+                        ),
+                ),
+                _ => {}
+            }
+
+            settings_list.add_child(child);
         }
 
         let mut buttons = Dom::new(NodeType::Div).with_id("buttons");
@@ -119,8 +161,10 @@ impl azul::traits::Layout for LayoutEditorWindow {
                     .with_id("component-list-editor")
                     .with_child(buttons)
                     .with_child(Dom::new(NodeType::Div).with_class("spacing-column"))
-                    .with_child(component_list),
-            ), /*.with_child(Dom::new(NodeType::Div).with_id("layout-settings"))*/
+                    .with_child(component_list)
+                    .with_child(Dom::new(NodeType::Div).with_class("spacing-column"))
+                    .with_child(settings_list),
+            ),
         )
     }
 }
@@ -279,7 +323,7 @@ pub fn open_window(editor: Arc<Mutex<layout::Editor>>) {
 
             let mut window_options = WindowCreateOptions::default();
             window_options.state.title = String::from("Layout Editor");
-            window_options.state.size.dimensions.width = 500.0;
+            window_options.state.size.dimensions.width = 650.0;
             window_options.state.size.dimensions.height = 450.0;
 
             let window = Window::new(window_options, css).unwrap();

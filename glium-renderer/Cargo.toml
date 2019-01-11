@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 
 [dependencies]
-# glium = "0.22.0"
-glium = { git = "https://github.com/thomcc/glium", branch = "glutin-0.19.0" }
+glium = "0.23.0"
+# glium = { git = "https://github.com/thomcc/glium", branch = "glutin-0.19.0" }
 # glium = { path = "../glium" }
 livesplit-rendering = { path = ".." }
+winit = { version = "0.18.0", features = ["icon_loading"] }

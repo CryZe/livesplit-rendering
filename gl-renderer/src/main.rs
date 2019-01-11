@@ -290,7 +290,7 @@ fn main() {
     // }));
 
     let layout_editor = Arc::new(Mutex::new(LayoutEditor::new(layout).unwrap()));
-    layout_editor::open_window(layout_editor.clone());
+    // layout_editor::open_window(layout_editor.clone());
 
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new()

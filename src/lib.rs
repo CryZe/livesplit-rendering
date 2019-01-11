@@ -392,7 +392,8 @@ impl Renderer {
                                 comparison_text_scale,
                                 [state.text_color; 2],
                                 segment_timer_end,
-                            ).max(name_end);
+                            )
+                            .max(name_end);
 
                         time_width = context
                             .measure_numbers(&comparison.time, comparison_text_scale)
@@ -411,7 +412,8 @@ impl Renderer {
                                 comparison_text_scale,
                                 [state.text_color; 2],
                                 segment_timer_end,
-                            ).max(name_end);
+                            )
+                            .max(name_end);
 
                         time_width = context
                             .measure_numbers(&comparison.time, comparison_text_scale)
@@ -592,12 +594,13 @@ impl Renderer {
                                 [p2.x, p2.y],
                                 [p2.x, component.middle],
                             ]
-                                .iter()
-                                .map(|&[x, y]| [width * x, y].into()),
+                            .iter()
+                            .map(|&[x, y]| [width * x, y].into()),
                             &mut FillTessellator::new(),
                             &FillOptions::tolerance(0.005).with_normals(false),
                             &mut fill_builder(&mut mesh),
-                        ).unwrap();
+                        )
+                        .unwrap();
 
                         let index = context.create_mesh(&mesh);
                         context.render_mesh(index, component.partial_fill_color);
@@ -617,13 +620,15 @@ impl Renderer {
                                 component.points[..len]
                                     .iter()
                                     .map(|p| [width * p.x, p.y].into()),
-                            ).chain(iter::once(
+                            )
+                            .chain(iter::once(
                                 [width * component.points[len - 1].x, component.middle].into(),
                             )),
                         &mut FillTessellator::new(),
                         &FillOptions::tolerance(0.005).with_normals(false),
                         &mut fill_builder(&mut mesh),
-                    ).unwrap();
+                    )
+                    .unwrap();
 
                     let index = context.create_mesh(&mesh);
                     context.render_mesh(index, component.complete_fill_color);
@@ -863,7 +868,8 @@ impl<'b, B: Backend + 'b> RenderContext<'b, B> {
             self.text_glyph_cache,
             &self.transform,
             self.backend,
-        ).map_or(pos[0], |g| {
+        )
+        .map_or(pos[0], |g| {
             g.position().x + g.unpositioned().h_metrics().advance_width
         })
     }
@@ -951,7 +957,8 @@ impl<'b, B: Backend + 'b> RenderContext<'b, B> {
             self.text_glyph_cache,
             &self.transform,
             self.backend,
-        ).map_or(pos[0], |g| g.position().x)
+        )
+        .map_or(pos[0], |g| g.position().x)
     }
 
     fn render_timer(&mut self, text: &str, pos: Pos, scale: f32, colors: [Color; 2]) -> f32 {
@@ -962,7 +969,8 @@ impl<'b, B: Backend + 'b> RenderContext<'b, B> {
             self.timer_glyph_cache,
             &self.transform,
             self.backend,
-        ).map_or(pos[0], |g| g.position().x)
+        )
+        .map_or(pos[0], |g| g.position().x)
     }
 
     fn measure_text(&self, text: &str, scale: f32) -> f32 {
@@ -974,7 +982,8 @@ impl<'b, B: Backend + 'b> RenderContext<'b, B> {
             font::scaled(&self.text_font, scale),
             text.trim(),
             [0.0, 0.0],
-        ).last()
+        )
+        .last()
         .map_or(0.0, |g| -g.position().x)
     }
 }
@@ -1009,62 +1018,80 @@ fn component_height(component: &ComponentState) -> f32 {
 
     match component {
         ComponentState::BlankSpace(state) => state.height as f32 * PSEUDO_PIXELS,
-        ComponentState::CurrentComparison(state) => if state.display_two_rows {
-            TWO_ROW_HEIGHT
-        } else {
-            1.0
-        },
-        ComponentState::CurrentPace(state) => if state.display_two_rows {
-            TWO_ROW_HEIGHT
-        } else {
-            1.0
-        },
-        ComponentState::DetailedTimer(_) => 2.5,
-        ComponentState::Delta(state) => if state.display_two_rows {
-            TWO_ROW_HEIGHT
-        } else {
-            1.0
-        },
-        ComponentState::Graph(state) => state.height as f32 * PSEUDO_PIXELS,
-        ComponentState::Separator(_) => 0.1,
-        ComponentState::PossibleTimeSave(state) => if state.display_two_rows {
-            TWO_ROW_HEIGHT
-        } else {
-            1.0
-        },
-        ComponentState::PreviousSegment(state) => if state.display_two_rows {
-            TWO_ROW_HEIGHT
-        } else {
-            1.0
-        },
-        ComponentState::Splits(state) => {
-            state.splits.len() as f32 * if state.display_two_rows {
+        ComponentState::CurrentComparison(state) => {
+            if state.display_two_rows {
                 TWO_ROW_HEIGHT
             } else {
                 1.0
-            } + if state.column_labels.is_some() {
-                1.0
-            } else {
-                0.0
             }
         }
-        ComponentState::SumOfBest(state) => if state.display_two_rows {
-            TWO_ROW_HEIGHT
-        } else {
-            1.0
-        },
-        ComponentState::Text(state) => if state.display_two_rows {
-            TWO_ROW_HEIGHT
-        } else {
-            1.0
-        },
+        ComponentState::CurrentPace(state) => {
+            if state.display_two_rows {
+                TWO_ROW_HEIGHT
+            } else {
+                1.0
+            }
+        }
+        ComponentState::DetailedTimer(_) => 2.5,
+        ComponentState::Delta(state) => {
+            if state.display_two_rows {
+                TWO_ROW_HEIGHT
+            } else {
+                1.0
+            }
+        }
+        ComponentState::Graph(state) => state.height as f32 * PSEUDO_PIXELS,
+        ComponentState::Separator(_) => 0.1,
+        ComponentState::PossibleTimeSave(state) => {
+            if state.display_two_rows {
+                TWO_ROW_HEIGHT
+            } else {
+                1.0
+            }
+        }
+        ComponentState::PreviousSegment(state) => {
+            if state.display_two_rows {
+                TWO_ROW_HEIGHT
+            } else {
+                1.0
+            }
+        }
+        ComponentState::Splits(state) => {
+            state.splits.len() as f32
+                * if state.display_two_rows {
+                    TWO_ROW_HEIGHT
+                } else {
+                    1.0
+                }
+                + if state.column_labels.is_some() {
+                    1.0
+                } else {
+                    0.0
+                }
+        }
+        ComponentState::SumOfBest(state) => {
+            if state.display_two_rows {
+                TWO_ROW_HEIGHT
+            } else {
+                1.0
+            }
+        }
+        ComponentState::Text(state) => {
+            if state.display_two_rows {
+                TWO_ROW_HEIGHT
+            } else {
+                1.0
+            }
+        }
         ComponentState::Timer(state) => state.height as f32 * PSEUDO_PIXELS,
         ComponentState::Title(_) => 2.0,
-        ComponentState::TotalPlaytime(state) => if state.display_two_rows {
-            TWO_ROW_HEIGHT
-        } else {
-            1.0
-        },
+        ComponentState::TotalPlaytime(state) => {
+            if state.display_two_rows {
+                TWO_ROW_HEIGHT
+            } else {
+                1.0
+            }
+        }
     }
 }
 

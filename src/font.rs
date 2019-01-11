@@ -137,7 +137,8 @@ pub fn ellipsis<'fd>(
             } else {
                 (glyph, false)
             }
-        }).take_while(move |&(_, should_end)| {
+        })
+        .take_while(move |&(_, should_end)| {
             // TODO: at some point it should possibly be take_while_inclusive or
             // something as this currently evaluates the last element in the map
             // even though we already know we'll end here
@@ -147,7 +148,8 @@ pub fn ellipsis<'fd>(
             } else {
                 false
             }
-        }).map(|(glyph, _)| glyph)
+        })
+        .map(|(glyph, _)| glyph)
 }
 
 pub fn measure<'fd>(layout: impl IntoIterator<Item = PositionedGlyph<'fd>>) -> f32 {
@@ -156,7 +158,8 @@ pub fn measure<'fd>(layout: impl IntoIterator<Item = PositionedGlyph<'fd>>) -> f
         .into_iter()
         .inspect(|g| {
             first.get_or_insert_with(|| g.position().x);
-        }).last()
+        })
+        .last()
         .map_or(0.0, |g| {
             g.position().x + g.unpositioned().h_metrics().advance_width - first.unwrap()
         })
