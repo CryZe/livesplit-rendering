@@ -7,8 +7,8 @@ authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 members = ["glium-renderer", "title-abbreviations", "gfx-renderer", "vulkano-renderer"]
 
 [dependencies]
-# livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "422dbb949a483f34e1a4b78fd727cdc17b8510cf" }
-livesplit-core = { path = "livesplit-core" }
+livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "422dbb949a483f34e1a4b78fd727cdc17b8510cf" }
+# livesplit-core = { path = "livesplit-core" }
 lyon = "0.11.0"
 rusttype = "0.7.2"
 euclid = "0.19.2"
