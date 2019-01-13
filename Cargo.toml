@@ -7,7 +7,7 @@ authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 members = ["glium-renderer", "title-abbreviations", "gfx-renderer", "vulkano-renderer"]
 
 [dependencies]
-livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "422dbb949a483f34e1a4b78fd727cdc17b8510cf" }
+livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", rev = "70dc217cb720b1e51dcaea714adfdf935dbca91e" }
 # livesplit-core = { path = "livesplit-core" }
 lyon = "0.11.0"
 rusttype = "0.7.2"
@@ -25,3 +25,4 @@ panic = "abort"
 gfx-hal = { git = "https://github.com/CryZe/gfx", branch = "vulkan-msaa"  }
 gfx-backend-vulkan = { git = "https://github.com/CryZe/gfx", branch = "vulkan-msaa" }
 gfx-backend-dx12 = { git = "https://github.com/CryZe/gfx", branch = "vulkan-msaa" }
+gfx-backend-gl = { git = "https://github.com/CryZe/gfx", branch = "vulkan-msaa" }

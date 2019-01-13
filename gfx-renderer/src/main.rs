@@ -1,8 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[macro_use]
+extern crate glsl_to_spirv_macros_impl;
+
 use {
-    // gfx_backend_vulkan as back,
-    gfx_backend_dx12 as back,
+    gfx_backend_vulkan as back,
+    // gfx_backend_dx12 as back,
+    // gfx_backend_gl as back,
     gfx_hal::{
         buffer::{self, IndexBufferView},
         command::{self, RenderPassInlineEncoder},
@@ -34,7 +38,7 @@ use {
         io::{prelude::*, BufReader, SeekFrom},
     },
     winit::{
-        ElementState, EventsLoop, Icon, KeyboardInput, MouseScrollDelta, VirtualKeyCode,
+        dpi, ElementState, EventsLoop, Icon, KeyboardInput, MouseScrollDelta, VirtualKeyCode,
         WindowBuilder, WindowEvent,
     },
 };
@@ -83,15 +87,16 @@ where
     images: Vec<(B::DescriptorSet, B::ImageView, B::Image, B::Memory)>,
 }
 
-struct GfxBackend<'frame, 'data, 'other, B>
+struct GfxBackend<'frame, 'data, 'other, 'window, B>
 where
     B: gfx_hal::Backend,
 {
     data: &'data mut LongLivingData<B>,
     encoder: &'frame mut RenderPassInlineEncoder<'other, B>,
+    window: &'window winit::Window,
 }
 
-impl<'frame, 'data, 'other, B> Backend for GfxBackend<'frame, 'data, 'other, B>
+impl<'frame, 'data, 'other, 'window, B> Backend for GfxBackend<'frame, 'data, 'other, 'window, B>
 where
     B: gfx_hal::Backend,
 {
@@ -266,13 +271,13 @@ where
     fn resize(&mut self, height: f32) {
         // // FIXME: Resizing doesn't just affect the height when the DPI is not
         // // 100% on at least Windows.
-        // let window = self.data.window;
-        // let dpi = window.get_hidpi_factor();
-        // let old_logical_size = window.get_inner_size().unwrap();
-        // let new_physical_size = dpi::PhysicalSize::new(0.0, height as f64).to_logical(dpi);
-        // let new_logical_size =
-        //     dpi::LogicalSize::new(old_logical_size.width as f64, new_physical_size.height);
-        // window.set_inner_size(new_logical_size);
+        let window = self.window;
+        let dpi = window.get_hidpi_factor();
+        let old_logical_size = window.get_inner_size().unwrap();
+        let new_physical_size = dpi::PhysicalSize::new(0.0, height as f64).to_logical(dpi);
+        let new_logical_size =
+            dpi::LogicalSize::new(old_logical_size.width as f64, new_physical_size.height);
+        window.set_inner_size(new_logical_size);
     }
 }
 
@@ -280,7 +285,7 @@ fn main() {
     env_logger::init();
 
     let mut events_loop = EventsLoop::new();
-    let builder = WindowBuilder::new()
+    let window_builder = WindowBuilder::new()
         .with_dimensions((300, 500).into())
         .with_title("LiveSplit One")
         .with_window_icon(Some(
@@ -289,10 +294,33 @@ fn main() {
         .with_resizable(true)
         .with_transparency(true);
 
-    let window = builder.build(&events_loop).unwrap();
-    let instance = back::Instance::create("Foo", 1);
-    let mut surface = instance.create_surface(&window);
-    let mut adapters = instance.enumerate_adapters();
+    #[cfg(not(feature = "gl"))]
+    let (window, mut adapters, mut surface) = {
+        let window = window_builder.build(&events_loop).unwrap();
+        let instance = back::Instance::create("Foo", 1);
+        let surface = instance.create_surface(&window);
+        let adapters = instance.enumerate_adapters();
+        (window, adapters, surface)
+    };
+    #[cfg(feature = "gl")]
+    let (mut adapters, mut surface) = {
+        let window = {
+            let builder = back::config_context(
+                back::glutin::ContextBuilder::new(),
+                format::Rgba8Unorm::SELF,
+                None,
+            )
+            .with_vsync(true)
+            .with_hardware_acceleration(None)
+            .with_srgb(true);
+
+            back::glutin::GlWindow::new(window_builder, builder, &events_loop).unwrap()
+        };
+
+        let surface = back::Surface::from_window(window);
+        let adapters = surface.enumerate_adapters();
+        (adapters, surface)
+    };
 
     let mut adapter = adapters.swap_remove(0);
     let memory_types = adapter.physical_device.memory_properties().memory_types;
@@ -388,6 +416,9 @@ fn main() {
         unsafe { device.create_swapchain(&mut surface, swap_config, None) }
             .expect("Can't create swapchain");
 
+    #[cfg(feature = "gl")]
+    let samples = 1;
+    #[cfg(not(feature = "gl"))]
     let samples = 8; // TODO:
 
     let render_pass = {
@@ -504,33 +535,24 @@ fn main() {
         unsafe { device.create_pipeline_layout(&[], &[(pso::ShaderStageFlags::VERTEX, 0..24)]) }
             .expect("Can't create pipeline layout");
     let (pipeline_textured, pipeline_colored) = {
-        let vs_module = {
-            let glsl = include_str!("quad.vert");
-            let mut spirv = Vec::new();
-            glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Vertex)
+        let vs_module = unsafe {
+            device
+                .create_shader_module(glsl_to_spirv_macros::include_glsl_vs!("src/quad.vert"))
                 .unwrap()
-                .read_to_end(&mut spirv)
-                .unwrap();
-            std::fs::write("foo.spirv", &spirv).unwrap();
-            unsafe { device.create_shader_module(&spirv) }.unwrap()
         };
-        let fs_module_textured = {
-            let glsl = include_str!("quad_textured.frag");
-            let mut spirv = Vec::new();
-            glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Fragment)
+        let fs_module_textured = unsafe {
+            device
+                .create_shader_module(glsl_to_spirv_macros::include_glsl_fs!(
+                    "src/quad_textured.frag"
+                ))
                 .unwrap()
-                .read_to_end(&mut spirv)
-                .unwrap();
-            unsafe { device.create_shader_module(&spirv) }.unwrap()
         };
-        let fs_module_colored = {
-            let glsl = include_str!("quad_colored.frag");
-            let mut spirv = Vec::new();
-            glsl_to_spirv::compile(&glsl, glsl_to_spirv::ShaderType::Fragment)
+        let fs_module_colored = unsafe {
+            device
+                .create_shader_module(glsl_to_spirv_macros::include_glsl_fs!(
+                    "src/quad_colored.frag"
+                ))
                 .unwrap()
-                .read_to_end(&mut spirv)
-                .unwrap();
-            unsafe { device.create_shader_module(&spirv) }.unwrap()
         };
 
         let (pipeline_textured, pipeline_colored) = {
@@ -971,10 +993,14 @@ fn main() {
                 let layout_state = layout.state(&timer);
 
                 if resize_dims.height > 0 {
+                    #[cfg(feature = "gl")]
+                    let window = surface.window();
+
                     renderer.render(
                         &mut GfxBackend {
                             data: &mut backend,
                             encoder: &mut encoder,
+                            window: &window,
                         },
                         (resize_dims.width as _, resize_dims.height as _),
                         &layout_state,

@@ -4,13 +4,19 @@ version = "0.1.0"
 authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 edition = "2018"
 
+[features]
+default = []
+gl = ["gfx-backend-gl"]
+
 [dependencies]
 gfx-hal = "0.1.0"
 winit = { version = "0.18.0", features = ["icon_loading"] }
 image = "0.20.1"
-glsl-to-spirv = "0.1.7"
 gfx-backend-dx12 = "0.1.0"
 gfx-backend-vulkan = "0.1.0"
+gfx-backend-gl = { version = "0.1.0", optional = true }
 env_logger = "0.6.0"
 log = "0.4.6"
 livesplit-rendering = { path = ".." }
+glsl-to-spirv-macros = "0.1.1"
+glsl-to-spirv-macros-impl = "0.1.0"
